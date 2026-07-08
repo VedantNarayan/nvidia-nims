@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Local testing and cached repos
+free-claude-code/
+scratch/
+scratch_repo/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Electron builder/asar output
+dist/
+release/
+*.asar

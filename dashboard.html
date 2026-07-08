@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Stats Dashboard - Nvidia NIMS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h2 class="drag-header">Stats Dashboard</h2>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div>Total Requests</div>
+        <div class="stat-value" id="valTotal">0</div>
+      </div>
+      <div class="stat-card" style="border-color: #ff5555;">
+        <div>Failed Requests</div>
+        <div class="stat-value" id="valErrors" style="color: #ff5555;">0</div>
+      </div>
+      <div class="stat-card" style="border-color: #00bcd4;">
+        <div>Avg Latency</div>
+        <div class="stat-value" id="valLatency" style="color: #00bcd4;">-- ms</div>
+      </div>
+    </div>
+    
+    <h3>Recent Activity</h3>
+    <div id="activity-log">
+      <!-- Injected by JS -->
+      <div style="color: var(--text-muted); text-align: center; padding-top: 20px;">No activity yet. Send a message in Claude Code!</div>
+    </div>
+  </div>
+
+  <script>
+    const valTotal = document.getElementById('valTotal');
+    const valErrors = document.getElementById('valErrors');
+    const valLatency = document.getElementById('valLatency');
+    const activityLog = document.getElementById('activity-log');
+
+    async function refreshStats() {
+      const stats = await window.api.getStats();
+      renderStats(stats);
+    }
+
+    function renderStats(stats) {
+      if (!stats) return;
+      valTotal.textContent = stats.totalRequests;
+      valErrors.textContent = stats.errors;
+      valLatency.textContent = stats.avgLatency ? `${Math.round(stats.avgLatency)} ms` : '-- ms';
+      
+      if (stats.activityLog && stats.activityLog.length > 0) {
+        activityLog.innerHTML = '';
+        stats.activityLog.forEach(log => {
+          const div = document.createElement('div');
+          div.className = 'activity-item';
+          div.textContent = log;
+          
+          if (log.includes(' 40') || log.includes(' 50')) {
+            div.style.color = '#ff5555';
+          } else if (log.includes(' 20')) {
+            div.style.color = 'var(--neon-green)';
+          }
+          
+          activityLog.appendChild(div);
+        });
+      }
+    }
+
+    window.api.onStatsUpdate((stats) => {
+      renderStats(stats);
+    });
+
+    // Initial load
+    refreshStats();
+    
+    // Fallback polling to ensure dashboard is always up-to-date
+    setInterval(refreshStats, 1000);
+  </script>
+</body>
+</html>

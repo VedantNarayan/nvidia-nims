@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Settings - Nvidia NIMS</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { color: var(--neon-green); }
+    
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #333;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+    .toggle-slider:before {
+      content: "";
+      position: absolute;
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background-color: #fff;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider { background-color: var(--neon-green); }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .startup-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 15px;
+    }
+    .startup-row span { font-size: 14px; font-weight: 500; color: var(--neon-green); }
+
+    /* Override label color to green */
+    label { color: #8fcf20; }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .tab-btn {
+      padding: 8px 18px;
+      background: transparent;
+      border: none;
+      color: #555;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      color: var(--neon-green);
+      border-bottom-color: var(--neon-green);
+    }
+    .tab-btn:hover:not(.active) { color: #8fcf20; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Model browser */
+    .model-browser {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .search-box {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      background: #000;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--neon-green);
+      font-size: 13px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .search-box:focus { border-color: var(--neon-green); }
+    .search-box::placeholder { color: #3a5500; }
+    .model-list {
+      max-height: 220px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    .model-list::-webkit-scrollbar { width: 6px; }
+    .model-list::-webkit-scrollbar-track { background: transparent; }
+    .model-list::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    .model-item {
+      padding: 7px 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: #7aaa20;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .model-item:hover { background: #1a2500; color: var(--neon-green); }
+    .model-item.selected { background: #1a2500; color: #fff; box-shadow: inset 0 0 0 1px var(--neon-green); }
+    .model-item .provider-badge {
+      background: #1a2500;
+      color: #5a8800;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid #2a3a00;
+    }
+    .assign-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .assign-btn {
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      border: 1px solid #2a3a00;
+      background: #0a1000;
+      color: #5a8800;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .assign-btn:hover {
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+      background: #1a2500;
+    }
+    .assign-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .status-msg {
+      font-size: 12px;
+      color: #5a8800;
+      text-align: center;
+      padding: 20px 0;
+    }
+    .status-msg.error { color: #ff4444; }
+    .fetch-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #76B900, #5a9000);
+      color: #000;
+      font-weight: 700;
+      font-size: 13px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Current assignments */
+    .assignment-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .assignment-tag {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #0a1000;
+      border: 1px solid #2a3a00;
+      color: var(--neon-green);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .assignment-tag .label {
+      color: #5a8800;
+      font-family: sans-serif;
+      font-weight: 600;
+    }
+    .assignment-tag .not-set {
+      color: #ff5555;
+    }
+
+    /* Manual entry helper text */
+    .helper-text {
+      font-size: 12px;
+      color: #5a8800;
+      margin-bottom: 15px;
+    }
+    .helper-text code {
+      background: #0a1000;
+      color: var(--neon-green);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    /* Override input text to green */
+    input {
+      color: var(--neon-green) !important;
+    }
+    input::placeholder { color: #3a5500 !important; }
+    .prefix { color: #5a8800; }
+  </style>
+</head>
+<body>
+  <div class="container" style="overflow-y: auto; padding-bottom: 20px;">
+    <h2 class="drag-header">Settings</h2>
+
+    <div class="startup-row">
+      <span>🚀 Open on Startup</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="startupToggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    
+    <div class="form-group">
+      <label for="apiKey">NVIDIA_NIM_API_KEY</label>
+      <input type="password" id="apiKey" class="selectable" style="width: 100%; box-sizing: border-box;" placeholder="nvapi-...">
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="browse">🔍 Browse Models</button>
+      <button class="tab-btn" data-tab="manual">✏️ Manual Entry</button>
+    </div>
+
+    <!-- Tab: Browse Models -->
+    <div class="tab-content active" id="tab-browse">
+      <div class="assignment-tags" id="currentAssignments"></div>
+      <div class="model-browser">
+        <button class="fetch-btn" id="fetchBtn">⬇ Fetch Available Models</button>
+        <input type="text" class="search-box selectable" id="modelSearch" placeholder="Search models..." disabled>
+        <div class="model-list" id="modelList">
+          <div class="status-msg">Click "Fetch" to load models from NVIDIA NIM</div>
+        </div>
+        <div class="assign-bar">
+          <button class="assign-btn" data-role="opus" disabled>→ Opus</button>
+          <button class="assign-btn" data-role="sonnet" disabled>→ Sonnet</button>
+          <button class="assign-btn" data-role="haiku" disabled>→ Haiku</button>
+          <button class="assign-btn" data-role="fallback" disabled>→ Fallback</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Manual Entry -->
+    <div class="tab-content" id="tab-manual">
+      <p class="helper-text">
+        Enter model IDs manually. The <code>nvidia_nim/</code> prefix is handled automatically.
+      </p>
+      <div class="form-group">
+        <label for="opus">Claude Opus Model</label>
+        <div class="input-wrapper">
+          <div class="prefix">nvidia_nim/</div>
+          <input type="text" id="opus" class="selectable" placeholder="meta/llama3-70b-instruct">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="sonnet">Claude Sonnet Model</label>
+        <div class="input-wrapper">
+          <div class="prefix">nvidia_nim/</div>
+          <input type="text" id="sonnet" class="selectable" placeholder="qwen/qwen2.5-coder-32b-instruct">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="haiku">Claude Haiku Model</label>
+        <div class="input-wrapper">
+          <div class="prefix">nvidia_nim/</div>
+          <input type="text" id="haiku" class="selectable" placeholder="meta/llama-3.1-8b-instruct">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="fallback">Fallback Model</label>
+        <div class="input-wrapper">
+          <div class="prefix">nvidia_nim/</div>
+          <input type="text" id="fallback" class="selectable" placeholder="qwen/qwen2.5-coder-32b-instruct">
+        </div>
+      </div>
+    </div>
+
+    <button id="saveBtn" class="btn btn-primary" style="margin-top: 15px;">Save &amp; Restart Server</button>
+  </div>
+
+  <script>
+    let allModels = [];
+    let selectedModel = null;
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Load config
+    document.addEventListener('DOMContentLoaded', async () => {
+      const config = await window.api.getConfig();
+      document.getElementById('apiKey').value = config.apiKey || '';
+      document.getElementById('opus').value = config.opus || '';
+      document.getElementById('sonnet').value = config.sonnet || '';
+      document.getElementById('haiku').value = config.haiku || '';
+      document.getElementById('fallback').value = config.fallback || '';
+
+      const loginSettings = await window.api.getLoginItemSettings();
+      document.getElementById('startupToggle').checked = loginSettings.openAtLogin || false;
+
+      renderAssignments(config);
+    });
+
+    document.getElementById('startupToggle').addEventListener('change', async (e) => {
+      await window.api.setLoginItemSettings(e.target.checked);
+    });
+
+    function renderAssignments(config) {
+      const container = document.getElementById('currentAssignments');
+      const roles = [
+        { key: 'opus', label: 'Opus' },
+        { key: 'sonnet', label: 'Sonnet' },
+        { key: 'haiku', label: 'Haiku' },
+        { key: 'fallback', label: 'Fallback' }
+      ];
+      container.innerHTML = roles.map(r => {
+        const val = config[r.key];
+        const short = val ? (val.includes('/') ? val.split('/').pop() : val) : null;
+        return `<div class="assignment-tag"><span class="label">${r.label}:</span> ${short ? short : '<span class="not-set">Not Set</span>'}</div>`;
+      }).join('');
+    }
+
+    // Fetch models
+    document.getElementById('fetchBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('fetchBtn');
+      const list = document.getElementById('modelList');
+      const search = document.getElementById('modelSearch');
+      
+      btn.textContent = '⏳ Fetching...';
+      btn.disabled = true;
+      list.innerHTML = '<div class="status-msg">Loading models from NVIDIA...</div>';
+
+      const result = await window.api.fetchModels();
+      
+      if (result.error) {
+        list.innerHTML = `<div class="status-msg error">❌ ${result.error}</div>`;
+        btn.textContent = '⬇ Retry Fetch';
+        btn.disabled = false;
+        return;
+      }
+
+      allModels = result.models || [];
+      btn.textContent = `✅ ${allModels.length} models loaded`;
+      search.disabled = false;
+      renderModelList(allModels);
+    });
+
+    // Search
+    document.getElementById('modelSearch').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = allModels.filter(m => m.toLowerCase().includes(q));
+      renderModelList(filtered);
+    });
+
+    function renderModelList(models) {
+      const list = document.getElementById('modelList');
+      if (models.length === 0) {
+        list.innerHTML = '<div class="status-msg">No models match your search</div>';
+        return;
+      }
+      list.innerHTML = models.map(m => {
+        const parts = m.split('/');
+        const provider = parts.length > 1 ? parts[0] : '';
+        const name = parts.length > 1 ? parts.slice(1).join('/') : m;
+        return `<div class="model-item" data-id="${m}">
+          ${provider ? `<span class="provider-badge">${provider}</span>` : ''}
+          <span>${name}</span>
+        </div>`;
+      }).join('');
+
+      list.querySelectorAll('.model-item').forEach(item => {
+        item.addEventListener('click', () => {
+          list.querySelectorAll('.model-item').forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedModel = item.dataset.id;
+          document.querySelectorAll('.assign-btn').forEach(b => b.disabled = false);
+        });
+      });
+    }
+
+    // Assign buttons
+    document.querySelectorAll('.assign-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!selectedModel) return;
+        const role = btn.dataset.role;
+        document.getElementById(role).value = selectedModel;
+        
+        btn.textContent = `✓ ${role.charAt(0).toUpperCase() + role.slice(1)}`;
+        btn.style.borderColor = 'var(--neon-green)';
+        btn.style.color = 'var(--neon-green)';
+        btn.style.background = '#1a2500';
+        setTimeout(() => {
+          btn.textContent = `→ ${role.charAt(0).toUpperCase() + role.slice(1)}`;
+          btn.style.borderColor = '';
+          btn.style.color = '';
+          btn.style.background = '';
+        }, 1500);
+
+        const config = {
+          opus: document.getElementById('opus').value,
+          sonnet: document.getElementById('sonnet').value,
+          haiku: document.getElementById('haiku').value,
+          fallback: document.getElementById('fallback').value
+        };
+        renderAssignments(config);
+      });
+    });
+
+    // Save
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('saveBtn');
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      const newConfig = {
+        apiKey: document.getElementById('apiKey').value,
+        opus: document.getElementById('opus').value,
+        sonnet: document.getElementById('sonnet').value,
+        haiku: document.getElementById('haiku').value,
+        fallback: document.getElementById('fallback').value
+      };
+
+      await window.api.saveConfig(newConfig);
+      
+      btn.textContent = 'Saved!';
+      setTimeout(() => {
+        btn.textContent = 'Save & Restart Server';
+        btn.disabled = false;
+      }, 2000);
+    });
+  </script>
+</body>
+</html>

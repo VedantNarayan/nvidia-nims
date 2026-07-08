@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Server Logs - Nvidia NIMS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container" style="padding: 10px;">
+    <h2 class="drag-header" style="padding-left: 10px; margin-bottom: 10px;">Server Logs</h2>
+    <div id="log-container"></div>
+  </div>
+
+  <script>
+    const logContainer = document.getElementById('log-container');
+    const MAX_LINES = 1000;
+    
+    window.api.onLogStream((log) => {
+      const span = document.createElement('span');
+      span.className = 'log-' + log.type;
+      span.textContent = log.message + (log.message.endsWith('\\n') ? '' : '\\n');
+      
+      logContainer.appendChild(span);
+      
+      // Auto scroll to bottom
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // Prune old logs
+      if (logContainer.childNodes.length > MAX_LINES) {
+        logContainer.removeChild(logContainer.firstChild);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background-color: #111; overflow: hidden; padding: 10px; }
+    
+    .header { text-align: center; margin-bottom: 8px; }
+    .header h2 { margin: 0; font-size: 15px; }
+    
+    .status-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a1a;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    
+    .toggle-container { margin-left: 12px; }
+    
+    .toggle-btn {
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-weight: bold;
+      font-size: 12px;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+    }
+    
+    .toggle-off { background-color: #ff5555; }
+    .toggle-on { background-color: var(--neon-green); color: #000; }
+    
+    .model-section { margin-bottom: 10px; }
+    .model-row { 
+      display: flex; justify-content: space-between; 
+      font-size: 11px; margin-bottom: 4px;
+      border-bottom: 1px solid #222;
+      padding-bottom: 3px;
+    }
+    .model-label { color: var(--text-muted); }
+    .model-val { font-family: monospace; color: var(--text-main); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    .nav-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .nav-buttons .btn {
+      width: 100%;
+      text-align: center;
+      padding: 7px 12px;
+      font-size: 12px;
+    }
+    
+  </style>
+</head>
+<body>
+  <div class="header drag-header">
+    <h2>Nvidia NIMS Proxy</h2>
+  </div>
+  
+  <div class="status-area">
+    <div id="status-text" style="font-weight: bold;">Status: 🔴 Stopped</div>
+    <div class="toggle-container">
+      <button id="toggle-btn" class="toggle-btn toggle-off">Turn ON</button>
+    </div>
+  </div>
+  
+  <div class="model-section">
+    <h3 style="font-size: 12px; margin-bottom: 6px;">Current Models</h3>
+    <div class="model-row"><span class="model-label">Opus:</span> <span class="model-val" id="modOpus">-</span></div>
+    <div class="model-row"><span class="model-label">Sonnet:</span> <span class="model-val" id="modSonnet">-</span></div>
+    <div class="model-row"><span class="model-label">Haiku:</span> <span class="model-val" id="modHaiku">-</span></div>
+  </div>
+  
+  <div class="nav-buttons">
+    <button class="btn" id="btnSettings">⚙️ Settings</button>
+    <button class="btn" id="btnDashboard">📊 Stats Dashboard</button>
+    <button class="btn" id="btnLogs">📝 Server Logs</button>
+    <button class="btn" id="btnQuit" style="margin-top: 4px; border-color: #ff5555; color: #ff5555;">Quit</button>
+  </div>
+  
+  <script>
+    let isRunning = false;
+    
+    function shortModel(name) {
+      if (!name) return 'Not Set';
+      // Show only the part after the last slash
+      return name.includes('/') ? name.split('/').pop() : name;
+    }
+
+    async function loadData() {
+      const config = await window.api.getConfig();
+      document.getElementById('modOpus').textContent = shortModel(config.opus);
+      document.getElementById('modSonnet').textContent = shortModel(config.sonnet);
+      document.getElementById('modHaiku').textContent = shortModel(config.haiku);
+    }
+    
+    window.api.onStateChange((state) => {
+      isRunning = state === 'running';
+      const btn = document.getElementById('toggle-btn');
+      const text = document.getElementById('status-text');
+      
+      if (isRunning) {
+        btn.textContent = 'Turn OFF';
+        btn.className = 'toggle-btn toggle-on';
+        text.innerHTML = 'Status: 🟢 Running';
+      } else {
+        btn.textContent = 'Turn ON';
+        btn.className = 'toggle-btn toggle-off';
+        text.innerHTML = 'Status: 🔴 Stopped';
+      }
+      
+      loadData(); // refresh models in case they changed
+    });
+    
+    document.getElementById('toggle-btn').addEventListener('click', () => {
+      window.api.toggleServer();
+    });
+
+    document.getElementById('btnSettings').addEventListener('click', () => window.api.openWindow('settings'));
+    document.getElementById('btnDashboard').addEventListener('click', () => window.api.openWindow('dashboard'));
+    document.getElementById('btnLogs').addEventListener('click', () => window.api.openWindow('logs'));
+    document.getElementById('btnQuit').addEventListener('click', () => window.api.quit());
+    
+    loadData();
+  </script>
+</body>
+</html>

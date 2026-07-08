@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to Nvidia NIMS</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background-color: var(--bg-dark); padding: 0; overflow: hidden; }
+    .slide-container { width: 700vw; height: 100vh; display: flex; transition: transform 0.4s ease-in-out; }
+    .slide { width: 100vw; height: 100vh; padding: 40px; box-sizing: border-box; display: flex; flex-direction: column; }
+    .slide-content { flex: 1; overflow-y: auto; }
+    .slide-title { font-size: 28px; margin-bottom: 20px; color: var(--neon-green); }
+    .slide-text { font-size: 16px; line-height: 1.6; color: #ddd; margin-bottom: 20px; }
+    .controls { display: flex; justify-content: space-between; margin-top: auto; padding-top: 10px; flex-shrink: 0; }
+    .nav-btn { padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-panel); color: #fff; }
+    .nav-btn.primary { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
+    .nav-btn.primary:disabled { background: #333; color: #888; border-color: #444; cursor: not-allowed; }
+    .install-logs { background: #000; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; color: #ccc; height: 120px; overflow-y: auto; margin-top: 15px; }
+    .log-line { margin: 2px 0; white-space: pre-wrap; word-wrap: break-word; }
+    .log-system { color: #88ccff; } .log-stdout { color: #ccc; } .log-stderr { color: #ff8888; } .log-error { color: #ff4444; font-weight: bold; }
+
+    /* Model browser in walkthrough */
+    .w-search { width: 100%; box-sizing: border-box; padding: 8px 12px; background: #000; border: 1px solid var(--border-color); border-radius: 6px; color: var(--neon-green); font-size: 13px; margin-bottom: 10px; outline: none; }
+    .w-search:focus { border-color: var(--neon-green); }
+    .w-search::placeholder { color: #3a5500; }
+    .w-model-list { max-height: 180px; overflow-y: auto; margin-bottom: 10px; background: #000; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; }
+    .w-model-list::-webkit-scrollbar { width: 6px; } .w-model-list::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    .w-mi { padding: 6px 10px; font-size: 12px; font-family: monospace; color: #7aaa20; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .w-mi:hover { background: #1a2500; color: var(--neon-green); }
+    .w-mi.sel { background: #1a2500; color: #fff; box-shadow: inset 0 0 0 1px var(--neon-green); }
+    .w-mi .pb { background: #1a2500; color: #5a8800; font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 1px solid #2a3a00; }
+    .w-assign { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .w-abtn { padding: 5px 12px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid #2a3a00; background: #0a1000; color: #5a8800; cursor: pointer; transition: all 0.2s; }
+    .w-abtn:hover { border-color: var(--neon-green); color: var(--neon-green); }
+    .w-abtn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .w-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .w-tag { display: flex; align-items: center; gap: 5px; background: #0a1000; border: 1px solid #2a3a00; color: var(--neon-green); font-size: 11px; padding: 4px 8px; border-radius: 4px; font-family: monospace; }
+    .w-tag .lbl { color: #5a8800; font-family: sans-serif; font-weight: 600; }
+    .w-status { font-size: 12px; color: #5a8800; text-align: center; padding: 15px 0; }
+    .w-status.err { color: #ff4444; }
+    .w-fetch { width: 100%; padding: 10px; background: linear-gradient(135deg, #76B900, #5a9000); color: #000; font-weight: 700; font-size: 13px; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
+    .w-fetch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Tutorial step styles */
+    .step-card { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+    .step-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--neon-green); color: #000; font-weight: 800; font-size: 14px; border-radius: 50%; margin-right: 10px; }
+    .step-header { display: flex; align-items: center; margin-bottom: 10px; }
+    .step-title { font-size: 16px; font-weight: 700; color: #fff; }
+    .step-desc { font-size: 13px; color: #bbb; line-height: 1.5; }
+    .step-desc code { background: #000; color: var(--neon-green); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    .step-img { width: 100%; max-width: 380px; border-radius: 8px; border: 1px solid #333; margin-top: 10px; }
+    .download-btn { display: block; width: 100%; padding: 14px; background: linear-gradient(135deg, #76B900, #5a9000); color: #000; font-weight: 700; font-size: 15px; text-align: center; border-radius: 8px; border: none; cursor: pointer; margin-top: 12px; text-decoration: none; }
+    .tip-box { background: #1a2500; border: 1px solid #3a5500; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #aed75f; margin-top: 10px; }
+    .tip-box strong { color: var(--neon-green); }
+  </style>
+</head>
+<body>
+  <div class="slide-container" id="slider">
+
+    <!-- Slide 1: Welcome -->
+    <div class="slide">
+      <div class="slide-content">
+        <h1 class="slide-title drag-header">Welcome to Nvidia NIMS</h1>
+        <p class="slide-text">This application serves as a completely seamless, native macOS wrapper for your local Claude proxy.</p>
+        <p class="slide-text"><strong>Features:</strong></p>
+        <ul style="color: #ddd; line-height: 1.8;"><li>Runs silently in your Menu Bar</li><li>Automatically patches Upstream API crashes</li><li>Detailed Stats Dashboard with Latency &amp; Tokens</li><li>Real-time Server Logs</li></ul>
+        <div id="installLogs" class="install-logs"><div class="log-line log-system">Initializing environment...</div></div>
+      </div>
+      <div class="controls"><div></div><button class="nav-btn primary" id="next1Btn" disabled>Installing Backend...</button></div>
+    </div>
+
+    <!-- Slide 2: API Key -->
+    <div class="slide">
+      <div class="slide-content">
+        <h1 class="slide-title drag-header">API Configuration</h1>
+        <p class="slide-text">Enter your NVIDIA NIM API key. This key authenticates all model requests through your local proxy.</p>
+        <div class="form-group" style="margin-top: 20px;">
+          <label style="color: #8fcf20;">NVIDIA NIM API Key</label>
+          <input type="password" id="wApiKey" style="width: 100%; box-sizing: border-box; color: var(--neon-green);" class="input-wrapper selectable" placeholder="nvapi-...">
+        </div>
+        <div class="tip-box" style="margin-top: 20px;">
+          <strong>💡 Where to get this?</strong> Visit <code>build.nvidia.com</code> → Sign in → API Keys to generate your free key.
+        </div>
+      </div>
+      <div class="controls"><button class="nav-btn" id="back1Btn">Back</button><button class="nav-btn primary" id="next2Btn">Next</button></div>
+    </div>
+
+    <!-- Slide 3: Model Selection Browser -->
+    <div class="slide">
+      <div class="slide-content">
+        <h1 class="slide-title drag-header">Select Models</h1>
+        <p class="slide-text" style="font-size: 14px; margin-bottom: 10px;">Fetch and assign NVIDIA NIM models to each Claude slot. Click a model, then click the assign button.</p>
+        <div class="w-tags" id="wAssignments"></div>
+        <button class="w-fetch" id="wFetchBtn">⬇ Fetch Available Models</button>
+        <input type="text" class="w-search selectable" id="wModelSearch" placeholder="Search models..." disabled>
+        <div class="w-model-list" id="wModelList"><div class="w-status">Click "Fetch" to load models</div></div>
+        <div class="w-assign">
+          <button class="w-abtn" data-role="opus" disabled>→ Opus</button>
+          <button class="w-abtn" data-role="sonnet" disabled>→ Sonnet</button>
+          <button class="w-abtn" data-role="haiku" disabled>→ Haiku</button>
+          <button class="w-abtn" data-role="fallback" disabled>→ Fallback</button>
+        </div>
+        <!-- Hidden inputs to hold values -->
+        <input type="hidden" id="wOpus"><input type="hidden" id="wSonnet"><input type="hidden" id="wHaiku"><input type="hidden" id="wFallback">
+      </div>
+      <div class="controls"><button class="nav-btn" id="back2Btn">Back</button><button class="nav-btn primary" id="next3Btn">Next</button></div>
+    </div>
+
+    <!-- Slide 4: Startup Settings -->
+    <div class="slide">
+      <div class="slide-content">
+        <h1 class="slide-title drag-header">System Integration</h1>
+        <p class="slide-text">Would you like Nvidia NIMS to automatically start whenever you log into your Mac?</p>
+        <p class="slide-text" style="font-size: 13px; color: var(--text-muted);">Highly recommended so your proxy is always available without manual intervention.</p>
+        <div style="background: var(--bg-panel); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 30px;">
+          <label style="display: flex; align-items: center; cursor: pointer; color: #fff;">
+            <input type="checkbox" id="loginCheck" style="width: 20px; height: 20px; margin-right: 15px;" checked>
+            <span style="font-size: 16px;">Start on Login</span>
+          </label>
+        </div>
+      </div>
+      <div class="controls"><button class="nav-btn" id="back3Btn">Back</button><button class="nav-btn primary" id="next4Btn">Next</button></div>
+    </div>
+
+    <!-- Slide 5: Claude Desktop Tutorial - Download & Enable -->
+    <div class="slide">
+      <div class="slide-content">
+        <h1 class="slide-title drag-header">Setup Claude Desktop</h1>
+        <p class="slide-text" style="font-size: 14px; margin-bottom: 12px;">Connect the official <strong>Claude Desktop app</strong> to your local NIMS proxy.</p>
+        <div class="step-card"><div class="step-header"><span class="step-num">1</span><span class="step-title">Download Claude Desktop</span></div><p class="step-desc">Download and install the official Claude Desktop app for macOS.</p><a class="download-btn" id="downloadClaude" href="#">⬇ Download Claude Desktop for macOS</a></div>
+        <div class="step-card"><div class="step-header"><span class="step-num">2</span><span class="step-title">Open Settings</span></div><p class="step-desc">Launch Claude Desktop. Click <strong>Claude</strong> in the menu bar → <code>Settings...</code> or press <code>⌘ ,</code></p></div>
+        <div class="step-card"><div class="step-header"><span class="step-num">3</span><span class="step-title">Enable Developer Mode</span></div><p class="step-desc">In Settings, find the <strong>Developer</strong> tab. Toggle <strong>"Enable Developer Mode"</strong> ON to reveal the Gateway settings.</p></div>
+      </div>
+      <div class="controls"><button class="nav-btn" id="back4Btn">Back</button><button class="nav-btn primary" id="next5Btn">Next</button></div>
+    </div>
+
+    <!-- Slide 6: Configure Gateway -->
+    <div class="slide">
+      <div class="slide-content">
+        <h1 class="slide-title drag-header">Configure Gateway</h1>
+        <div class="step-card"><div class="step-header"><span class="step-num">4</span><span class="step-title">Set the Proxy URL</span></div><p class="step-desc">In Developer settings, enter the <strong>API Base URL</strong>:</p><div style="background:#000;padding:10px 14px;border-radius:6px;margin-top:8px;font-family:monospace;font-size:14px;color:var(--neon-green);">http://127.0.0.1:8082</div><p class="step-desc" style="margin-top:8px;"><em>"Stop talking to the internet. Send all requests to the local NIMS proxy."</em></p></div>
+        <div class="step-card"><div class="step-header"><span class="step-num">5</span><span class="step-title">Set the API Key</span></div><p class="step-desc">Enter the authentication token that the NIMS proxy recognizes:</p><div style="background:#000;padding:10px 14px;border-radius:6px;margin-top:8px;font-family:monospace;font-size:14px;color:var(--neon-green);letter-spacing:0.5px;">freecc</div><div class="tip-box"><strong>💡 Note:</strong> <code>freecc</code> is the auth token the proxy expects. Your NVIDIA key is configured separately.</div></div>
+        <div class="step-card"><div class="step-header"><span class="step-num">6</span><span class="step-title">Reference</span></div><p class="step-desc">Your Developer settings should look like this:</p><img src="tutorial-dev-tab.png" class="step-img" alt="Developer tab configured"></div>
+      </div>
+      <div class="controls"><button class="nav-btn" id="back5Btn">Back</button><button class="nav-btn primary" id="next6Btn">Next</button></div>
+    </div>
+
+    <!-- Slide 7: CLI/VS Code + Finish -->
+    <div class="slide">
+      <div class="slide-content">
+        <h1 class="slide-title drag-header">CLI &amp; VS Code Setup</h1>
+        <p class="slide-text" style="font-size: 14px; margin-bottom: 12px;">For <strong>Claude Code CLI</strong> or <strong>VS Code extension</strong>:</p>
+        <div style="background:#000;padding:12px;border-radius:6px;border:1px solid var(--border-color);font-family:monospace;font-size:12px;margin-bottom:12px;"><div style="color:var(--neon-green);margin-bottom:5px;"># Add to ~/.zshrc</div><div style="color:#fff;">export ANTHROPIC_BASE_URL="http://127.0.0.1:8082"</div><div style="color:#fff;">export ANTHROPIC_AUTH_TOKEN="freecc"</div></div>
+        <div style="background:#000;padding:12px;border-radius:6px;border:1px solid var(--border-color);font-family:monospace;font-size:12px;margin-bottom:12px;"><div style="color:#00bcd4;margin-bottom:5px;">// Or in VS Code settings.json</div><div style="color:#ccc;">"claudeCode.environmentVariables": [</div><div style="color:#fff;padding-left:10px;">{ "name": "ANTHROPIC_BASE_URL", "value": "http://127.0.0.1:8082" },</div><div style="color:#fff;padding-left:10px;">{ "name": "ANTHROPIC_AUTH_TOKEN", "value": "freecc" }</div><div style="color:#ccc;">]</div></div>
+        <div style="background:var(--bg-panel);padding:12px;border-radius:6px;border:1px solid var(--border-color);font-size:12px;"><div style="color:var(--neon-green);font-weight:600;margin-bottom:8px;">Model Mapping (what Claude sees → what runs)</div><div style="display:flex;justify-content:space-between;color:#aaa;padding:3px 0;border-bottom:1px solid #333;"><span>Opus 4</span><span style="color:#fff;font-family:monospace;">→ qwen3-coder-480b-a35b-instruct</span></div><div style="display:flex;justify-content:space-between;color:#aaa;padding:3px 0;border-bottom:1px solid #333;"><span>Sonnet 4</span><span style="color:#fff;font-family:monospace;">→ mistral-nemotron</span></div><div style="display:flex;justify-content:space-between;color:#aaa;padding:3px 0;"><span>Haiku 4</span><span style="color:#fff;font-family:monospace;">→ your configured model</span></div></div>
+      </div>
+      <div class="controls"><button class="nav-btn" id="back6Btn">Back</button><button class="nav-btn primary" id="finishBtn">Finish Setup</button></div>
+    </div>
+
+  </div>
+
+  <script>
+    const slider = document.getElementById('slider');
+    function goSlide(i) { slider.style.transform = `translateX(-${i * 100}vw)`; }
+
+    document.getElementById('next1Btn').addEventListener('click', () => goSlide(1));
+    document.getElementById('back1Btn').addEventListener('click', () => goSlide(0));
+    document.getElementById('next2Btn').addEventListener('click', () => goSlide(2));
+    document.getElementById('back2Btn').addEventListener('click', () => goSlide(1));
+    document.getElementById('next3Btn').addEventListener('click', () => goSlide(3));
+    document.getElementById('back3Btn').addEventListener('click', () => goSlide(2));
+    document.getElementById('next4Btn').addEventListener('click', () => goSlide(4));
+    document.getElementById('back4Btn').addEventListener('click', () => goSlide(3));
+    document.getElementById('next5Btn').addEventListener('click', () => goSlide(5));
+    document.getElementById('back5Btn').addEventListener('click', () => goSlide(4));
+    document.getElementById('next6Btn').addEventListener('click', () => goSlide(6));
+    document.getElementById('back6Btn').addEventListener('click', () => goSlide(5));
+
+    // Download link
+    document.getElementById('downloadClaude').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.api.openExternal('https://claude.ai/api/desktop/darwin/universal/dmg/latest/redirect?utm_source=claude_code&utm_medium=docs');
+    });
+
+    // ── Model Browser Logic ──
+    let wAllModels = [], wSelectedModel = null;
+    const wModels = { opus: '', sonnet: '', haiku: '', fallback: '' };
+
+    function wRenderTags() {
+      const c = document.getElementById('wAssignments');
+      c.innerHTML = ['opus','sonnet','haiku','fallback'].map(k => {
+        const v = wModels[k];
+        const short = v ? (v.includes('/') ? v.split('/').pop() : v) : '<span style="color:#ff5555">Not Set</span>';
+        return `<div class="w-tag"><span class="lbl">${k.charAt(0).toUpperCase()+k.slice(1)}:</span> ${short}</div>`;
+      }).join('');
+    }
+    wRenderTags();
+
+    document.getElementById('wFetchBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('wFetchBtn');
+      const list = document.getElementById('wModelList');
+      const apiKey = document.getElementById('wApiKey').value;
+      if (!apiKey) { list.innerHTML = '<div class="w-status err">❌ Please enter your API key on the previous page first</div>'; return; }
+
+      btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+      list.innerHTML = '<div class="w-status">Loading models from NVIDIA...</div>';
+
+      // Temporarily save key so backend can use it
+      await window.api.saveConfig({ apiKey, onboardingComplete: false });
+      const result = await window.api.fetchModels();
+
+      if (result.error) { list.innerHTML = `<div class="w-status err">❌ ${result.error}</div>`; btn.textContent = '⬇ Retry Fetch'; btn.disabled = false; return; }
+
+      wAllModels = result.models || [];
+      btn.textContent = `✅ ${wAllModels.length} models loaded`;
+      document.getElementById('wModelSearch').disabled = false;
+      wRenderList(wAllModels);
+    });
+
+    document.getElementById('wModelSearch').addEventListener('input', (e) => {
+      wRenderList(wAllModels.filter(m => m.toLowerCase().includes(e.target.value.toLowerCase())));
+    });
+
+    function wRenderList(models) {
+      const list = document.getElementById('wModelList');
+      if (!models.length) { list.innerHTML = '<div class="w-status">No models match</div>'; return; }
+      list.innerHTML = models.map(m => {
+        const p = m.split('/'); const prov = p.length > 1 ? p[0] : ''; const name = p.length > 1 ? p.slice(1).join('/') : m;
+        return `<div class="w-mi" data-id="${m}">${prov ? `<span class="pb">${prov}</span>` : ''}<span>${name}</span></div>`;
+      }).join('');
+      list.querySelectorAll('.w-mi').forEach(item => {
+        item.addEventListener('click', () => {
+          list.querySelectorAll('.w-mi').forEach(i => i.classList.remove('sel'));
+          item.classList.add('sel');
+          wSelectedModel = item.dataset.id;
+          document.querySelectorAll('.w-abtn').forEach(b => b.disabled = false);
+        });
+      });
+    }
+
+    document.querySelectorAll('.w-abtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!wSelectedModel) return;
+        const role = btn.dataset.role;
+        wModels[role] = wSelectedModel;
+        document.getElementById('w' + role.charAt(0).toUpperCase() + role.slice(1)).value = wSelectedModel;
+        btn.textContent = `✓ ${role.charAt(0).toUpperCase()+role.slice(1)}`;
+        btn.style.borderColor = 'var(--neon-green)'; btn.style.color = 'var(--neon-green)';
+        setTimeout(() => { btn.textContent = `→ ${role.charAt(0).toUpperCase()+role.slice(1)}`; btn.style.borderColor = ''; btn.style.color = ''; }, 1500);
+        wRenderTags();
+      });
+    });
+
+    // ── Installation Progress ──
+    const installLogs = document.getElementById('installLogs');
+    const next1Btn = document.getElementById('next1Btn');
+    if (window.api) {
+      window.api.onLogStream((log) => { const d = document.createElement('div'); d.className = 'log-line log-' + log.type; d.textContent = log.message; installLogs.appendChild(d); installLogs.scrollTop = installLogs.scrollHeight; });
+      window.api.onInitComplete(() => { const d = document.createElement('div'); d.className = 'log-line log-system'; d.style.color = 'var(--neon-green)'; d.textContent = 'Backend ready! You may now proceed.'; installLogs.appendChild(d); installLogs.scrollTop = installLogs.scrollHeight; next1Btn.textContent = 'Next'; next1Btn.disabled = false; });
+      window.api.onInitError((err) => { const d = document.createElement('div'); d.className = 'log-line log-error'; d.textContent = 'Installation failed: ' + err; installLogs.appendChild(d); installLogs.scrollTop = installLogs.scrollHeight; next1Btn.textContent = 'Retry (Restart App)'; });
+    }
+
+    // ── Finish ──
+    document.getElementById('finishBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('finishBtn'); btn.textContent = 'Configuring...'; btn.disabled = true;
+      await window.api.setLoginItemSettings(document.getElementById('loginCheck').checked);
+      const newConfig = {
+        apiKey: document.getElementById('wApiKey').value,
+        opus: document.getElementById('wOpus').value,
+        sonnet: document.getElementById('wSonnet').value,
+        haiku: document.getElementById('wHaiku').value,
+        fallback: document.getElementById('wFallback').value,
+        onboardingComplete: true
+      };
+      await window.api.saveConfig(newConfig);
+      window.api.closeWalkthrough();
+    });
+  </script>
+</body>
+</html>
