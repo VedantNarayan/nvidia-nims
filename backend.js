@@ -70,7 +70,7 @@ class ProxyManager extends EventEmitter {
 
   patchModelListing(settings) {
     if (!fs.existsSync(this.repoPath)) return;
-    const providersDir = path.join(this.repoPath, 'providers');
+    const providersDir = path.join(this.repoPath, 'src', 'free_claude_code', 'providers');
     if (!fs.existsSync(providersDir)) {
       fs.mkdirSync(providersDir, { recursive: true });
     }
@@ -87,46 +87,42 @@ class ProxyManager extends EventEmitter {
 
     const pyCode = `
 from __future__ import annotations
-
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
 from typing import Any
+from free_claude_code.application.model_metadata import ProviderModelInfo as _ProviderModelInfo
 
-from providers.exceptions import ModelListResponseError
+class ModelListResponseError(ValueError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
 
-@dataclass(frozen=True, slots=True)
-class ProviderModelInfo:
-    model_id: str
-    supports_thinking: bool | None = None
+def model_infos_from_ids(model_ids: Iterable[str], *, supports_thinking: bool | None = None) -> frozenset[_ProviderModelInfo]:
+    return frozenset(_ProviderModelInfo(model_id=model_id, supports_thinking=supports_thinking) for model_id in model_ids if model_id.strip())
+
+def extract_openai_model_infos(payload: Any, *, provider_name: str) -> frozenset[_ProviderModelInfo]:
+    return frozenset([
+${uniqueModels.map(m => `        _ProviderModelInfo(model_id="${m}"),`).join('\n')}
+    ])
 
 def extract_openai_model_ids(payload: Any, *, provider_name: str) -> frozenset[str]:
-    # HARDCODED PATCH BY NVIDIA NIMS
-    # Bypassing the dynamic fetch to prevent crashes from missing models on the upstream API
     return frozenset([
 ${uniqueModels.map(m => `        "${m}",`).join('\n')}
     ])
 
-# We also leave the other functions stubbed to avoid breaking imports
-def model_infos_from_ids(model_ids: Iterable[str], *, supports_thinking: bool | None = None) -> frozenset[ProviderModelInfo]:
-    return frozenset(ProviderModelInfo(model_id=m, supports_thinking=supports_thinking) for m in model_ids)
+def extract_openrouter_tool_model_infos(payload: Any, *, provider_name: str) -> frozenset[_ProviderModelInfo]:
+    return frozenset()
 
 def extract_openrouter_tool_model_ids(payload: Any, *, provider_name: str) -> frozenset[str]:
-    return frozenset()
-
-def extract_openrouter_tool_model_infos(payload: Any, *, provider_name: str) -> frozenset[ProviderModelInfo]:
-    return frozenset()
-
-def extract_ollama_model_ids(payload: Any, *, provider_name: str) -> frozenset[str]:
     return frozenset()
 `;
     
     const patchPath = path.join(providersDir, 'model_listing.py');
     fs.writeFileSync(patchPath, pyCode.trim(), 'utf8');
-    this.emit('log', { type: 'system', message: 'providers/model_listing.py patched to bypass model listing crash.' });
+    this.emit('log', { type: 'system', message: 'src/free_claude_code/providers/model_listing.py patched to bypass model listing crash.' });
   }
 
   patchAppMiddleware() {
-    const appPath = path.join(this.repoPath, 'api', 'app.py');
+    const appPath = path.join(this.repoPath, 'src', 'free_claude_code', 'api', 'app.py');
     if (!fs.existsSync(appPath)) return;
     
     let content = fs.readFileSync(appPath, 'utf8');
@@ -168,7 +164,7 @@ def extract_ollama_model_ids(payload: Any, *, provider_name: str) -> frozenset[s
 
       content = content.replace(originalMiddleware, patchedMiddleware);
       fs.writeFileSync(appPath, content, 'utf8');
-      this.emit('log', { type: 'system', message: 'api/app.py patched for advanced stats tracking.' });
+      this.emit('log', { type: 'system', message: 'src/free_claude_code/api/app.py patched for advanced stats tracking.' });
     }
   }
 
@@ -190,8 +186,8 @@ def extract_ollama_model_ids(payload: Any, *, provider_name: str) -> frozenset[s
       path.join(os.homedir(), '.local/bin')
     ].join(':');
 
-    // uv run automatically handles venv creation and dependency installation if uv.lock is present
-    this.process = spawn('uv', ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8082'], {
+    // Launch free_claude_code server via python serve entrypoint
+    this.process = spawn('uv', ['run', 'python', '-c', 'from free_claude_code.cli.commands import serve; serve()'], {
       cwd: this.repoPath,
       env: { ...process.env, PATH: customPath }
     });
