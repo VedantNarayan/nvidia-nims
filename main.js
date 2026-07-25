@@ -299,6 +299,7 @@ app.whenReady().then(async () => {
   console.log("ProxyManager initialized, user data path:", app.getPath('userData'));
   
   proxyManager.on('log', (log) => {
+    logToFile(`[${log.type.toUpperCase()}] ${log.message}`);
     if (logsWindow) logsWindow.webContents.send('log-stream', log);
     if (walkthroughWindow) walkthroughWindow.webContents.send('log-stream', log);
   });

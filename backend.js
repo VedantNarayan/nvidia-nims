@@ -193,11 +193,8 @@ def extract_ollama_model_ids(payload: Any, *, provider_name: str) -> frozenset[s
     // uv run automatically handles venv creation and dependency installation if uv.lock is present
     this.process = spawn('uv', ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8082'], {
       cwd: this.repoPath,
-      env: { ...process.env, PATH: customPath },
-      detached: true  // Create a new process group so we can kill the entire tree
+      env: { ...process.env, PATH: customPath }
     });
-    // Don't let the child keep the parent alive
-    this.process.unref();
 
     this.process.stdout.on('data', (data) => {
       const text = data.toString();
