@@ -142,25 +142,6 @@ export ANTHROPIC_AUTH_TOKEN="freecc"
 
 Click **"Finish Setup"** to save your configuration, start the proxy server, and open the Stats Dashboard. The onboarding is complete!
 
-### Building macOS DMG & Releasing
-
-To compile a `.dmg` installer for distribution or GitHub Releases:
-
-```bash
-# Install dependencies
-npm install
-
-# Build standalone macOS DMG installer
-npm run build
-```
-
-The generated `.dmg` file will be saved in the `dist/` directory.
-
-To publish a release on GitHub:
-```bash
-gh release create v1.0.0 ./dist/*.dmg --title "v1.0.0 Release" --notes "Initial macOS release with DMG installer."
-```
-
 ---
 
 ## Technical Architecture
