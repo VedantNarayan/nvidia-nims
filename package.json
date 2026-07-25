@@ -1,10 +1,44 @@
 {
-  "name": "claudecode-nims",
+  "name": "nvidia-nims",
   "productName": "Nvidia Nims",
   "version": "1.0.0",
-  "description": "",
+  "description": "Native macOS menu bar client for managing and monitoring local Nvidia NIMS proxy connections.",
   "main": "main.js",
-  "author": "",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder --mac dmg",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.nvidia.nims.macos",
+    "productName": "Nvidia Nims",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg"
+      ],
+      "icon": "NVIDIAIcon.icns"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  },
   "license": "ISC",
   "type": "commonjs"
 }

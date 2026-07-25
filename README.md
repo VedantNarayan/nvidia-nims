@@ -142,6 +142,25 @@ export ANTHROPIC_AUTH_TOKEN="freecc"
 
 Click **"Finish Setup"** to save your configuration, start the proxy server, and open the Stats Dashboard. The onboarding is complete!
 
+### Building macOS DMG & Releasing
+
+To compile a `.dmg` installer for distribution or GitHub Releases:
+
+```bash
+# Install dependencies
+npm install
+
+# Build standalone macOS DMG installer
+npm run build
+```
+
+The generated `.dmg` file will be saved in the `dist/` directory.
+
+To publish a release on GitHub:
+```bash
+gh release create v1.0.0 ./dist/*.dmg --title "v1.0.0 Release" --notes "Initial macOS release with DMG installer."
+```
+
 ---
 
 ## Technical Architecture
@@ -151,14 +170,12 @@ macOS caches menu bar status item positions by **Bundle Identifier** and status 
 - The status item uses a unique GUID (`E890835D-BAA3-41E9-9C5B-1A05872A7C32`)
 - The bundle identifier is set to `com.nvidia.nims.macos` to force a clean layout slot
 
-### Local Python Backend
+### Local Python Backend & Proxy Fixes
 The client manages a local Python proxy server process:
 - Spawns the backend via `uv run uvicorn server:app` on port `8082`
 - Tracks stdout/stderr to parse real-time statistics
 - Handles stale process termination (via `lsof` + `SIGKILL`) to prevent `EADDRINUSE` port conflicts
-
-### Keyboard Shortcut
-Press **Ctrl+Shift+N** anywhere to toggle the tray popup, even if the menu bar icon is hidden in the overflow area.
+- **Claude Code Web Search & Tool Call Validation:** Resolved validation errors when handling empty assistant content blocks during web searches and image block conversions.
 
 ---
 
@@ -175,7 +192,7 @@ npm install
 npm run dev
 ```
 
-### Packaging
+### Packaging (Manual asar)
 ```bash
 # Package source into asar
 npx asar pack . "/Applications/Nvidia Nims.app/Contents/Resources/app.asar"
