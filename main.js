@@ -63,13 +63,24 @@ function saveConfig(newConfig) {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 
+function getIconPath(iconName) {
+  const asarPath = path.join(__dirname, iconName);
+  if (fs.existsSync(asarPath)) return asarPath;
+  const resPath = path.join(process.resourcesPath, iconName);
+  if (fs.existsSync(resPath)) return resPath;
+  return asarPath;
+}
+
 function createTray() {
-  const iconPath = path.join(process.resourcesPath, 'trayIconTemplate.png');
+  const iconPath = getIconPath('trayIconTemplate.png');
   console.log("createTray: Loading icon from: " + iconPath);
   
   let image;
   try {
     image = nativeImage.createFromPath(iconPath);
+    if (image.isEmpty()) {
+      console.error("createTray: Warning - image is empty from path " + iconPath);
+    }
     image.setTemplateImage(true);
     console.log("createTray: Loaded icon image - empty: " + image.isEmpty());
   } catch (e) {
@@ -106,8 +117,8 @@ function updateTrayStatus(state) {
   if (!tray) return;
   try {
     const iconName = state === 'running' ? 'trayIconActive.png' : 'trayIconTemplate.png';
-    const iconPath = path.join(process.resourcesPath, iconName);
-    console.log("updateTrayStatus: Swapping icon directly with path string: " + iconPath);
+    const iconPath = getIconPath(iconName);
+    console.log("updateTrayStatus: Swapping icon directly with path: " + iconPath);
     const img = nativeImage.createFromPath(iconPath);
     if (state !== 'running') {
       img.setTemplateImage(true);

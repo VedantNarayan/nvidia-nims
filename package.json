@@ -17,6 +17,15 @@
   "build": {
     "appId": "com.nvidia.nims.macos",
     "productName": "Nvidia Nims",
+    "extraResources": [
+      "trayIconTemplate.png",
+      "trayIconTemplate@2x.png",
+      "trayIconActive.png",
+      "trayIconActive@2x.png",
+      "tray-icon.png",
+      "tray-icon-offline.png",
+      "tray-icon-offline-dark.png"
+    ],
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
