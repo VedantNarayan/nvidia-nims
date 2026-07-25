@@ -43,6 +43,7 @@ class ProxyManager extends EventEmitter {
   }
 
   updateEnv(settings) {
+    if (!fs.existsSync(this.repoPath)) return;
     const envPath = path.join(this.repoPath, '.env');
     let envContent = '';
     
@@ -68,6 +69,12 @@ class ProxyManager extends EventEmitter {
   }
 
   patchModelListing(settings) {
+    if (!fs.existsSync(this.repoPath)) return;
+    const providersDir = path.join(this.repoPath, 'providers');
+    if (!fs.existsSync(providersDir)) {
+      fs.mkdirSync(providersDir, { recursive: true });
+    }
+
     // We only want the specific models without the prefix
     const modelsToReturn = [];
     if (settings.opus) modelsToReturn.push(settings.opus);
@@ -113,7 +120,7 @@ def extract_ollama_model_ids(payload: Any, *, provider_name: str) -> frozenset[s
     return frozenset()
 `;
     
-    const patchPath = path.join(this.repoPath, 'providers', 'model_listing.py');
+    const patchPath = path.join(providersDir, 'model_listing.py');
     fs.writeFileSync(patchPath, pyCode.trim(), 'utf8');
     this.emit('log', { type: 'system', message: 'providers/model_listing.py patched to bypass model listing crash.' });
   }
