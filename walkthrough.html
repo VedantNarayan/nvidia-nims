@@ -205,14 +205,34 @@
       btn.textContent = '⏳ Fetching...'; btn.disabled = true;
       list.innerHTML = '<div class="w-status">Loading models from NVIDIA...</div>';
 
-      // Temporarily save key so backend can use it
-      await window.api.saveConfig({ apiKey, onboardingComplete: false });
-      const result = await window.api.fetchModels();
+      try {
+        const result = await window.api.fetchModels(apiKey);
+        if (result && result.models && result.models.length > 0) {
+          wAllModels = result.models;
+          btn.textContent = `✅ ${wAllModels.length} models loaded`;
+        } else {
+          // Default popular fallback models if API returned empty or error
+          wAllModels = [
+            'qwen/qwen2.5-coder-32b-instruct',
+            'meta/llama3-70b-instruct',
+            'meta/llama-3.1-8b-instruct',
+            'mistralai/mistral-7b-instruct-v0.3',
+            'nvidia/neva-22b'
+          ];
+          btn.textContent = `⚠️ Loaded ${wAllModels.length} default models`;
+        }
+      } catch (err) {
+        wAllModels = [
+          'qwen/qwen2.5-coder-32b-instruct',
+          'meta/llama3-70b-instruct',
+          'meta/llama-3.1-8b-instruct',
+          'mistralai/mistral-7b-instruct-v0.3',
+          'nvidia/neva-22b'
+        ];
+        btn.textContent = `⚠️ Loaded ${wAllModels.length} default models`;
+      }
 
-      if (result.error) { list.innerHTML = `<div class="w-status err">❌ ${result.error}</div>`; btn.textContent = '⬇ Retry Fetch'; btn.disabled = false; return; }
-
-      wAllModels = result.models || [];
-      btn.textContent = `✅ ${wAllModels.length} models loaded`;
+      btn.disabled = false;
       document.getElementById('wModelSearch').disabled = false;
       wRenderList(wAllModels);
     });
@@ -263,17 +283,22 @@
     // ── Finish ──
     document.getElementById('finishBtn').addEventListener('click', async () => {
       const btn = document.getElementById('finishBtn'); btn.textContent = 'Configuring...'; btn.disabled = true;
-      await window.api.setLoginItemSettings(document.getElementById('loginCheck').checked);
-      const newConfig = {
-        apiKey: document.getElementById('wApiKey').value,
-        opus: document.getElementById('wOpus').value,
-        sonnet: document.getElementById('wSonnet').value,
-        haiku: document.getElementById('wHaiku').value,
-        fallback: document.getElementById('wFallback').value,
-        onboardingComplete: true
-      };
-      await window.api.saveConfig(newConfig);
-      window.api.closeWalkthrough();
+      try {
+        await window.api.setLoginItemSettings(document.getElementById('loginCheck').checked);
+        const newConfig = {
+          apiKey: document.getElementById('wApiKey').value || '',
+          opus: document.getElementById('wOpus').value || 'qwen/qwen2.5-coder-32b-instruct',
+          sonnet: document.getElementById('wSonnet').value || 'meta/llama3-70b-instruct',
+          haiku: document.getElementById('wHaiku').value || 'meta/llama-3.1-8b-instruct',
+          fallback: document.getElementById('wFallback').value || 'qwen/qwen2.5-coder-32b-instruct',
+          onboardingComplete: true
+        };
+        await window.api.saveConfig(newConfig);
+      } catch (e) {
+        console.error("Save config error:", e);
+      } finally {
+        window.api.closeWalkthrough();
+      }
     });
   </script>
 </body>

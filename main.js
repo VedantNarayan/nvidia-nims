@@ -362,30 +362,34 @@ ipcMain.handle('get-config', () => config);
 
 ipcMain.handle('save-config', async (event, newConfig) => {
   saveConfig(newConfig);
-  await proxyManager.init(); // ensure repo exists before patching
-  proxyManager.updateEnv(config);
-  proxyManager.patchModelListing(config);
-  proxyManager.patchAppMiddleware();
-  
-  if (proxyManager.process) {
-    // Wait for the process to actually die before restarting
-    await new Promise((resolve) => {
-      proxyManager.once('state-change', () => resolve());
-      proxyManager.stop();
-      // Safety timeout in case the event never fires
-      setTimeout(resolve, 4000);
-    });
-    // Extra pause to let the OS fully release the port
-    await new Promise(r => setTimeout(r, 500));
+  try {
+    await proxyManager.init(); // ensure repo exists before patching
+    proxyManager.updateEnv(config);
+    proxyManager.patchModelListing(config);
+    proxyManager.patchAppMiddleware();
+    
+    if (proxyManager.process) {
+      // Wait for the process to actually die before restarting
+      await new Promise((resolve) => {
+        proxyManager.once('state-change', () => resolve());
+        proxyManager.stop();
+        // Safety timeout in case the event never fires
+        setTimeout(resolve, 3000);
+      });
+      // Extra pause to let the OS fully release the port
+      await new Promise(r => setTimeout(r, 500));
+    }
+    proxyManager.start();
+  } catch (err) {
+    console.error("save-config init/start error:", err);
   }
-  proxyManager.start();
   return true;
 });
 
 ipcMain.handle('get-stats', () => proxyManager.stats);
 
-ipcMain.handle('fetch-models', async () => {
-  const apiKey = config.apiKey;
+ipcMain.handle('fetch-models', async (event, passedApiKey) => {
+  const apiKey = passedApiKey || config.apiKey;
   if (!apiKey) return { error: 'No API key configured' };
   
   try {
@@ -406,14 +410,14 @@ ipcMain.handle('fetch-models', async () => {
             const models = (json.data || []).map(m => m.id).sort();
             resolve({ models });
           } catch (e) {
-            resolve({ error: 'Failed to parse response' });
+            resolve({ error: 'Failed to parse response from NVIDIA API' });
           }
         });
       });
       req.on('error', (e) => resolve({ error: e.message }));
-      req.setTimeout(10000, () => {
+      req.setTimeout(8000, () => {
         req.destroy();
-        resolve({ error: 'Request timed out' });
+        resolve({ error: 'Request timed out connecting to NVIDIA API' });
       });
       req.end();
     });
@@ -424,8 +428,7 @@ ipcMain.handle('fetch-models', async () => {
 
 ipcMain.handle('set-login-settings', (event, enable) => {
   app.setLoginItemSettings({
-    openAtLogin: enable,
-    openAsHidden: true
+    openAtLogin: enable
   });
   return true;
 });
@@ -437,7 +440,9 @@ ipcMain.handle('get-login-settings', () => {
 ipcMain.on('close-walkthrough', () => {
   if (walkthroughWindow) {
     walkthroughWindow.close();
+    walkthroughWindow = null;
   }
+  openWindow('dashboard');
 });
 
 ipcMain.on('toggle-server', () => {

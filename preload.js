@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld('api', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (config) => ipcRenderer.invoke('save-config', config),
   getStats: () => ipcRenderer.invoke('get-stats'),
-  fetchModels: () => ipcRenderer.invoke('fetch-models'),
+  fetchModels: (apiKey) => ipcRenderer.invoke('fetch-models', apiKey),
   
   toggleServer: () => ipcRenderer.send('toggle-server'),
   openWindow: (type) => ipcRenderer.send('open-window', type),
